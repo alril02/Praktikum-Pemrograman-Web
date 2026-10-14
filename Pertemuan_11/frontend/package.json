@@ -1,0 +1,22 @@
+{
+  "name": "toko-frontend",
+  "private": true,
+  "version": "0.3.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/api.test.mjs tests/validasi.test.mjs tests/aman.test.mjs tests/auth.store.test.mjs"
+  },
+  "dependencies": {
+    "pinia": "^2.3.0",
+    "vue": "^3.5.0",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.0",
+    "vite": "^6.0.0"
+  }
+}
+

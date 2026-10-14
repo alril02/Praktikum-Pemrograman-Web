@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+  Praktikum Pertemuan 2 - Landing Page Profil UMKM
+  Kerjakan setiap TODO. Target: Lighthouse Accessibility & SEO > 90.
+  Hapus komentar TODO setelah selesai.
+-->
+<!-- TODO 1: tambahkan atribut lang yang benar pada <html> -->
+<html>
+<head>
+  <meta charset="UTF-8">
+  <!-- TODO 2: tambahkan meta viewport -->
+
+  <!-- TODO 3: <title> unik (nama usaha + nilai jual), maks. ~60 karakter -->
+  <title></title>
+
+  <!-- TODO 4: meta description 120-160 karakter -->
+
+  <!-- TODO 5: Open Graph (og:type, og:title, og:description, og:image, og:url) -->
+
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- TODO 6: skip link yang menuju ke #konten -->
+
+  <!-- TODO 7: ganti div berikut dengan landmark semantik -->
+  <div class="site-header">
+    <div class="container bar">
+      <a href="#" class="brand">Nama UMKM Anda</a>
+
+      <!-- TODO 8: <nav> dengan aria-label dan daftar <ul><li><a> -->
+      <div class="menu">
+        <a href="#tentang">Tentang</a>
+        <a href="#produk">Produk</a>
+        <a href="#kontak">Kontak</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- TODO 9: <main id="konten"> -->
+  <div class="container">
+
+    <!-- HERO -->
+    <section class="hero" aria-labelledby="judul-hero">
+      <!-- TODO 10: tepat satu <h1>; paragraf ajakan singkat; tautan ke #produk bergaya tombol -->
+      <div class="hero-teks">
+        <div class="judul-besar" id="judul-hero">Judul utama usaha Anda</div>
+        <p>Satu kalimat nilai jual yang jelas.</p>
+        <a class="btn" href="#produk">Lihat Produk</a>
+      </div>
+
+      <!-- TODO 11: gambar hero: alt bermakna, width & height, JANGAN lazy -->
+      <img class="hero-gambar" src="https://placehold.co/800x600" alt="">
+    </section>
+
+    <!-- TENTANG -->
+    <section id="tentang" aria-labelledby="judul-tentang">
+      <!-- TODO 12: h2 + 2 paragraf tentang usaha -->
+      <div class="judul-seksi" id="judul-tentang">Tentang Kami</div>
+    </section>
+
+    <!-- PRODUK -->
+    <section id="produk" aria-labelledby="judul-produk">
+      <div class="judul-seksi" id="judul-produk">Produk Kami</div>
+
+      <div class="produk-grid">
+        <!-- TODO 13: ubah tiap kartu menjadi <article> dengan <h3>, <img alt>, harga -->
+        <div class="kartu">
+          <img src="https://placehold.co/400x300" alt="" width="400" height="300" loading="lazy">
+          <div class="kartu-judul">Produk 1</div>
+          <p class="harga">Rp 25.000</p>
+        </div>
+        <div class="kartu">
+          <img src="https://placehold.co/400x300" alt="" width="400" height="300" loading="lazy">
+          <div class="kartu-judul">Produk 2</div>
+          <p class="harga">Rp 35.000</p>
+        </div>
+        <div class="kartu">
+          <img src="https://placehold.co/400x300" alt="" width="400" height="300" loading="lazy">
+          <div class="kartu-judul">Produk 3</div>
+          <p class="harga">Rp 45.000</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- KONTAK -->
+    <section id="kontak" aria-labelledby="judul-kontak">
+      <div class="judul-seksi" id="judul-kontak">Hubungi Kami</div>
+
+      <!-- TODO 14: form dengan label terhubung (for/id), autocomplete, textarea, tombol type=submit -->
+      <form action="#" method="post">
+        <input type="text" placeholder="Nama">
+        <input type="text" placeholder="Email">
+        <textarea placeholder="Pesan"></textarea>
+        <div class="btn">Kirim</div>
+      </form>
+    </section>
+
+  </div>
+
+  <!-- TODO 15: ganti dengan <footer> -->
+  <div class="site-footer">
+    <div class="container">
+      <p>&copy; 2026 Nama UMKM Anda</p>
+    </div>
+  </div>
+</body>
+</html>

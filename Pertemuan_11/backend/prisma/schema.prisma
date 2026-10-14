@@ -1,0 +1,70 @@
+// Skema pertemuan 11: Produk mendapat `deskripsi` dan `gambar`.
+// Jalankan:  npx prisma migrate dev --name tambah-gambar-produk
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Kategori {
+  id     Int      @id @default(autoincrement())
+  nama   String   @unique
+  slug   String   @unique
+  produk Produk[]
+}
+
+model Produk {
+  id         Int           @id @default(autoincrement())
+  nama       String
+  harga      Int
+  stok       Int           @default(0)
+  deskripsi  String?
+  // Nama berkas hasil unggahan (UUID + ekstensi), BUKAN path penuh dan bukan nama dari klien.
+  gambar     String?
+  kategoriId Int
+  kategori   Kategori      @relation(fields: [kategoriId], references: [id])
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+  diubahPada DateTime      @updatedAt
+
+  @@index([kategoriId])
+  @@index([nama])
+}
+
+model Pengguna {
+  id           Int       @id @default(autoincrement())
+  nama         String
+  email        String    @unique
+  passwordHash String?
+  peran        String    @default("user")
+  pesanan      Pesanan[]
+}
+
+model Pesanan {
+  id         Int           @id @default(autoincrement())
+  penggunaId Int
+  pengguna   Pengguna      @relation(fields: [penggunaId], references: [id])
+  status     String        @default("menunggu_pembayaran")
+  total      Int
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+
+  @@index([penggunaId])
+}
+
+model ItemPesanan {
+  id          Int     @id @default(autoincrement())
+  pesananId   Int
+  produkId    Int
+  jumlah      Int
+  hargaSatuan Int
+  pesanan     Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  produk      Produk  @relation(fields: [produkId], references: [id])
+
+  @@unique([pesananId, produkId])
+  @@index([produkId])
+}

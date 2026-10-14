@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Katalog Toko UMKM (Fetch)</title>
+  <style>
+    :root { --teks:#1f2933; --aksen:#0b6e4f; --batas:#cbd2d9; --redup:#52606d; }
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, "Segoe UI", Roboto, sans-serif; line-height:1.6; color:var(--teks); }
+    :focus-visible { outline:3px solid #1a73e8; outline-offset:2px; }
+    header { padding:1rem; border-bottom:1px solid var(--batas); }
+    h1 { margin:0; font-size:1.25rem; }
+    main { width:min(100% - 2rem, 70rem); margin:1.5rem auto; }
+    .filter { display:grid; gap:1rem; margin-bottom:1rem; }
+    @media (min-width:40rem){ .filter { grid-template-columns:2fr 1fr; } }
+    label { display:block; font-weight:600; margin-bottom:.25rem; }
+    input, select { width:100%; padding:.65rem .75rem; border:1px solid var(--redup); border-radius:.5rem; font:inherit; }
+    #pesan { padding:.75rem 1rem; background:#f5f7fa; border-radius:.5rem; }
+    button { padding:.65rem 1rem; border:0; border-radius:.5rem; background:var(--aksen); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+    .grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit, minmax(15rem,1fr)); margin-top:1rem; }
+    .grid[aria-busy="true"] { opacity:.5; }
+    .kartu { border:1px solid var(--batas); border-radius:.5rem; padding:1rem; }
+    .kartu h2 { margin:0 0 .25rem; font-size:1.05rem; }
+    .kartu p { margin:0; }
+    .kategori { color:var(--redup); text-transform:capitalize; font-size:.9rem; }
+    .harga { font-weight:700; }
+  </style>
+</head>
+<body>
+  <header><h1>Katalog Toko UMKM</h1></header>
+
+  <main>
+    <form class="filter" role="search" aria-label="Filter katalog" onsubmit="return false">
+      <div>
+        <label for="cari">Cari produk</label>
+        <input id="cari" type="search" autocomplete="off" placeholder="mis. gayo">
+      </div>
+      <div>
+        <label for="kategori">Kategori</label>
+        <select id="kategori">
+          <option value="semua">Semua</option>
+          <option value="kopi">Kopi</option>
+          <option value="teh">Teh</option>
+          <option value="gula">Gula</option>
+          <option value="alat">Alat</option>
+        </select>
+      </div>
+    </form>
+
+    <div id="pesan" role="status" aria-live="polite"></div>
+    <button id="coba-lagi" type="button" hidden>Coba lagi</button>
+
+    <section id="daftar-produk" class="grid" aria-label="Daftar produk"></section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

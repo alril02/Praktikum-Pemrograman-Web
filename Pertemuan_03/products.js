@@ -1,0 +1,15 @@
+// Data produk lokal. Pada pertemuan 4 data ini dipindah ke products.json dan diambil via fetch.
+export const produk = [
+  { id: 1,  nama: "Kopi Gayo 250g",        harga: 65000, kategori: "kopi", stok: 12 },
+  { id: 2,  nama: "Kopi Toraja 250g",      harga: 72000, kategori: "kopi", stok: 0 },
+  { id: 3,  nama: "Kopi Flores Bajawa",    harga: 68000, kategori: "kopi", stok: 9 },
+  { id: 4,  nama: "Teh Melati 100g",       harga: 30000, kategori: "teh",  stok: 25 },
+  { id: 5,  nama: "Teh Hijau 100g",        harga: 28000, kategori: "teh",  stok: 8 },
+  { id: 6,  nama: "Teh Hitam Premium",     harga: 35000, kategori: "teh",  stok: 14 },
+  { id: 7,  nama: "Gula Aren 500g",        harga: 22000, kategori: "gula", stok: 40 },
+  { id: 8,  nama: "Gula Kelapa Cair",      harga: 26000, kategori: "gula", stok: 18 },
+  { id: 9,  nama: "Cangkir Keramik",       harga: 45000, kategori: "alat", stok: 5 },
+  { id: 10, nama: "French Press 350ml",    harga: 120000, kategori: "alat", stok: 3 },
+  // Uji keamanan: nama berisi HTML. Harus tampil sebagai teks, bukan dieksekusi.
+  { id: 11, nama: "<img src=x onerror=alert('XSS')> Paket Hadiah", harga: 99000, kategori: "alat", stok: 2 },
+];

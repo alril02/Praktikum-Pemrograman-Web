@@ -1,0 +1,71 @@
+// Skema basis data toko UMKM.
+// Setelah mengubah berkas ini jalankan:  npx prisma migrate dev --name <deskripsi-singkat>
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite" // ganti "postgresql" untuk produksi
+  url      = env("DATABASE_URL")
+}
+
+// 1 Kategori -> N Produk
+model Kategori {
+  id     Int      @id @default(autoincrement())
+  nama   String   @unique
+  slug   String   @unique
+  produk Produk[]
+}
+
+model Produk {
+  id         Int           @id @default(autoincrement())
+  nama       String
+  harga      Int // rupiah utuh, BUKAN Float
+  stok       Int           @default(0)
+  kategoriId Int
+  kategori   Kategori      @relation(fields: [kategoriId], references: [id])
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+  diubahPada DateTime      @updatedAt
+
+  // TODO (Migrasi #2): tambahkan  deskripsi String?  lalu
+  //   npx prisma migrate dev --name tambah-deskripsi-produk
+
+  @@index([kategoriId])
+  @@index([nama])
+}
+
+// 1 Pengguna -> N Pesanan
+model Pengguna {
+  id      Int       @id @default(autoincrement())
+  nama    String
+  email   String    @unique
+  pesanan Pesanan[]
+}
+
+// 1 Pesanan -> N ItemPesanan ; Pesanan <-> Produk adalah N:M lewat ItemPesanan
+model Pesanan {
+  id         Int           @id @default(autoincrement())
+  penggunaId Int
+  pengguna   Pengguna      @relation(fields: [penggunaId], references: [id])
+  status     String        @default("menunggu_pembayaran")
+  total      Int
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+
+  @@index([penggunaId])
+}
+
+model ItemPesanan {
+  id          Int     @id @default(autoincrement())
+  pesananId   Int
+  produkId    Int
+  jumlah      Int
+  hargaSatuan Int // snapshot harga saat transaksi (denormalisasi disengaja)
+  pesanan     Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  produk      Produk  @relation(fields: [produkId], references: [id])
+
+  @@unique([pesananId, produkId])
+  @@index([produkId])
+}

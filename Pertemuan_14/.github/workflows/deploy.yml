@@ -1,0 +1,55 @@
+# Pengiriman berkelanjutan: dijalankan setelah merge ke main.
+# Memicu deploy hook PaaS (Render/Railway/dll.) lalu memverifikasi dengan smoke test.
+#
+# Secrets/variabel yang harus diatur pada GitHub (Settings -> Environments -> production):
+#   secrets.DEPLOY_HOOK_API   : URL deploy hook layanan API
+#   secrets.DEPLOY_HOOK_WORKER: URL deploy hook layanan worker
+#   vars.API_URL              : mis. https://api.contoh.id
+#   vars.FRONTEND_URL         : mis. https://toko.contoh.id
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:        # pemicu manual (mis. untuk rollback ke commit tertentu)
+
+permissions:
+  contents: read
+
+# Satu deploy produksi pada satu waktu; deploy yang sedang berjalan tidak dibatalkan di tengah
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ke production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: production        # aktifkan "Required reviewers" pada environment ini untuk persetujuan manual
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Picu deploy API
+        run: curl -fsS -X POST "${{ secrets.DEPLOY_HOOK_API }}"
+
+      - name: Picu deploy worker
+        run: curl -fsS -X POST "${{ secrets.DEPLOY_HOOK_WORKER }}"
+
+      - name: Tunggu layanan siap
+        run: |
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.API_URL }}/api/v1/siap" || true)
+            echo "percobaan $i: HTTP $code"
+            [ "$code" = "200" ] && exit 0
+            sleep 10
+          done
+          echo "Layanan tidak siap dalam batas waktu" >&2
+          exit 1
+
+      - name: Smoke test produksi
+        run: node backend/scripts/smoke-produksi.mjs "${{ vars.API_URL }}" "--origin-frontend=${{ vars.FRONTEND_URL }}"

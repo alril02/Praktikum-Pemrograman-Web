@@ -1,0 +1,734 @@
+openapi: 3.1.0
+info:
+  title: API Toko UMKM
+  version: 1.1.0
+  description: |
+    REST API toko UMKM: katalog produk, autentikasi JWT, pesanan, pembayaran via gateway, dan webhook.
+
+    **Konvensi**
+    - Semua respons JSON. Sukses: `{ "data": ... }` (koleksi + `meta`). Galat: `{ "error": { "kode", "pesan", "detail?" } }`.
+    - Autentikasi: header `Authorization: Bearer <token>` (JWT, 15 menit).
+    - Uang dalam rupiah utuh (integer).
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Lokal
+tags:
+  - name: Sistem
+  - name: Auth
+  - name: Produk
+  - name: Pesanan
+  - name: Pembayaran
+  - name: Admin
+
+security:
+  - bearerAuth: []
+
+paths:
+  /kesehatan:
+    get:
+      tags: [Sistem]
+      summary: Liveness (proses hidup)
+      operationId: kesehatan
+      security: []
+      responses:
+        "200":
+          description: Proses hidup
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Kesehatan" }
+
+  /siap:
+    get:
+      tags: [Sistem]
+      summary: Readiness (dependensi siap)
+      operationId: siap
+      security: []
+      responses:
+        "200":
+          description: Siap melayani trafik
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Siap" }
+        "503":
+          description: Belum siap (database tidak tersedia) atau sedang shutdown
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Siap" }
+
+  /auth/daftar:
+    post:
+      tags: [Auth]
+      summary: Mendaftar akun baru (peran selalu `user`)
+      operationId: daftar
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DaftarInput" }
+      responses:
+        "201":
+          description: Akun dibuat
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Pengguna" }
+        "409":
+          description: Email sudah terdaftar
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Validasi" }
+
+  /auth/masuk:
+    post:
+      tags: [Auth]
+      summary: Masuk dan memperoleh token JWT
+      description: Pesan galat identik untuk email tidak terdaftar dan sandi salah (mencegah enumerasi akun). Dibatasi laju (429).
+      operationId: masuk
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MasukInput" }
+      responses:
+        "200":
+          description: Berhasil
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TokenResponse" }
+        "401":
+          description: Email atau kata sandi salah
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Validasi" }
+        "429":
+          description: Terlalu banyak percobaan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /auth/saya:
+    get:
+      tags: [Auth]
+      summary: Profil pengguna saat ini
+      operationId: saya
+      responses:
+        "200":
+          description: Profil
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Pengguna" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+
+  /produk:
+    get:
+      tags: [Produk]
+      summary: Daftar produk (publik, di-cache)
+      operationId: daftarProduk
+      security: []
+      parameters:
+        - { name: kategori, in: query, schema: { type: string, enum: [kopi, teh, gula, alat] } }
+        - { name: q, in: query, description: Pencarian pada nama, schema: { type: string } }
+        - { name: urut, in: query, description: "Kolom urut; awalan `-` untuk menurun", schema: { type: string, enum: [nama, harga, "-nama", "-harga"] } }
+        - { name: halaman, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: batas, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 10 } }
+      responses:
+        "200":
+          description: Daftar produk
+          headers:
+            X-Cache:
+              description: HIT bila dilayani dari cache aplikasi
+              schema: { type: string, enum: [HIT, MISS] }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DaftarProduk" }
+        "400":
+          description: Parameter `urut` tidak valid
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+    post:
+      tags: [Produk]
+      summary: Membuat produk (admin)
+      operationId: buatProduk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProdukInput" }
+      responses:
+        "201":
+          description: Produk dibuat
+          headers:
+            Location: { schema: { type: string }, description: URI produk baru }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Produk" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "403": { $ref: "#/components/responses/Dilarang" }
+        "422": { $ref: "#/components/responses/Validasi" }
+
+  /produk/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      tags: [Produk]
+      summary: Detail produk
+      operationId: ambilProduk
+      security: []
+      responses:
+        "200":
+          description: Produk ditemukan
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Produk" }
+        "400":
+          description: ID bukan bilangan bulat positif
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+    put:
+      tags: [Produk]
+      summary: Mengganti seluruh produk (admin)
+      operationId: gantiProduk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProdukInput" }
+      responses:
+        "200":
+          description: Produk diganti
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Produk" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "403": { $ref: "#/components/responses/Dilarang" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+        "422": { $ref: "#/components/responses/Validasi" }
+    patch:
+      tags: [Produk]
+      summary: Mengubah sebagian produk (admin)
+      operationId: ubahProduk
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProdukUbah" }
+      responses:
+        "200":
+          description: Produk diubah
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Produk" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "403": { $ref: "#/components/responses/Dilarang" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+        "422": { $ref: "#/components/responses/Validasi" }
+    delete:
+      tags: [Produk]
+      summary: Menghapus produk (admin)
+      description: Ditolak 409 bila produk sudah pernah dipesan.
+      operationId: hapusProduk
+      responses:
+        "204": { description: Dihapus }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "403": { $ref: "#/components/responses/Dilarang" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+        "409":
+          description: Produk masih direferensikan oleh pesanan
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /produk/{id}/gambar:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    post:
+      tags: [Produk]
+      summary: Mengunggah gambar produk (admin)
+      description: JPEG/PNG/WebP, maksimum 2 MB. Tipe diperiksa dari isi berkas (magic bytes).
+      operationId: unggahGambar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [gambar]
+              properties:
+                gambar: { type: string, format: binary }
+      responses:
+        "200":
+          description: Gambar tersimpan
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Produk" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "403": { $ref: "#/components/responses/Dilarang" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+        "413":
+          description: Berkas melebihi batas ukuran
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "415":
+          description: Isi berkas bukan JPEG, PNG, atau WebP
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Validasi" }
+
+  /pesanan:
+    get:
+      tags: [Pesanan]
+      summary: Daftar pesanan (milik sendiri; admin melihat semua)
+      operationId: daftarPesanan
+      responses:
+        "200":
+          description: Daftar pesanan
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, meta]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Pesanan" }
+                  meta:
+                    type: object
+                    properties:
+                      total: { type: integer }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+    post:
+      tags: [Pesanan]
+      summary: Checkout (atomik; pemilik dari token)
+      description: Harga dihitung server. Stok dikurangi atomik; gagal sebagian = rollback penuh.
+      operationId: buatPesanan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PesananInput" }
+      responses:
+        "201":
+          description: Pesanan dibuat
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Pesanan" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "409":
+          description: Stok tidak mencukupi (`STOK_TIDAK_CUKUP`)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422": { $ref: "#/components/responses/Validasi" }
+
+  /pesanan/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    get:
+      tags: [Pesanan]
+      summary: Detail pesanan (pemilik atau admin)
+      description: Pesanan milik pengguna lain dijawab 404 (tidak membocorkan keberadaan).
+      operationId: ambilPesanan
+      responses:
+        "200":
+          description: Pesanan
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Pesanan" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+
+  /pesanan/{id}/bayar:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer, minimum: 1 } }
+    post:
+      tags: [Pembayaran]
+      summary: Membuat tagihan pembayaran (idempoten)
+      description: |
+        Membuat charge di gateway dengan `Idempotency-Key = pesanan-{id}`. Pemanggilan ulang mengembalikan
+        charge yang sama. Status pesanan berubah hanya melalui webhook terverifikasi.
+      operationId: bayarPesanan
+      responses:
+        "200":
+          description: Tagihan siap
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data: { $ref: "#/components/schemas/Tagihan" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "404": { $ref: "#/components/responses/TidakDitemukan" }
+        "409":
+          description: Pesanan tidak berstatus menunggu pembayaran
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "502":
+          description: Gateway menolak atau tidak terjangkau
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "504":
+          description: Gateway tidak merespons tepat waktu
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /webhook/gateway:
+    post:
+      tags: [Pembayaran]
+      summary: Menerima webhook dari gateway (server-ke-server)
+      description: |
+        Header `X-Signature: t=<unix>,v1=<hex HMAC-SHA256 dari "<t>.<body mentah>">`.
+        Toleransi waktu 300 detik. Idempoten berdasarkan `id` peristiwa. Tidak memakai Bearer.
+      operationId: webhookGateway
+      security: []
+      parameters:
+        - name: X-Signature
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EventWebhook" }
+      responses:
+        "200":
+          description: Diterima (lihat `status` untuk hasil pemrosesan)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [diterapkan, diabaikan, duplikat, pesanan_tidak_ada, charge_tidak_cocok, jumlah_tidak_cocok, rekonsiliasi]
+        "400":
+          description: JSON rusak atau bentuk peristiwa tidak dikenali
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "401":
+          description: Tanda tangan tidak valid atau kedaluwarsa
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "409":
+          description: Konflik status; penyedia diharapkan mencoba lagi
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /admin/jobs:
+    get:
+      tags: [Admin]
+      summary: Daftar job antrean (admin)
+      operationId: daftarJob
+      parameters:
+        - { name: status, in: query, schema: { type: string, enum: [menunggu, berjalan, selesai, gagal] } }
+        - { name: jenis, in: query, schema: { type: string } }
+        - { name: kunciUnik, in: query, schema: { type: string } }
+        - { name: batas, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+      responses:
+        "200":
+          description: Daftar job
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Job" }
+        "401": { $ref: "#/components/responses/TidakTerautentikasi" }
+        "403": { $ref: "#/components/responses/Dilarang" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    TidakTerautentikasi:
+      description: Token tidak ada, tidak valid, atau kedaluwarsa
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Dilarang:
+      description: Peran tidak berhak
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    TidakDitemukan:
+      description: Resource tidak ditemukan
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Validasi:
+      description: Data tidak valid (daftar galat per field pada `detail`)
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ErrorValidasi" }
+
+  schemas:
+    Kesehatan:
+      type: object
+      required: [status, versi, uptimeDetik, waktu]
+      properties:
+        status: { type: string, const: ok }
+        versi: { type: string }
+        uptimeDetik: { type: integer }
+        waktu: { type: string }
+    Siap:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [siap, tidak_siap, berhenti] }
+        db: { type: string, enum: [ok, gagal] }
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [kode, pesan]
+          properties:
+            kode: { type: string, examples: [TIDAK_DITEMUKAN] }
+            pesan: { type: string }
+    ErrorValidasi:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [kode, pesan, detail]
+          properties:
+            kode: { type: string, const: VALIDASI }
+            pesan: { type: string }
+            detail:
+              type: array
+              items:
+                type: object
+                required: [field, pesan]
+                properties:
+                  field: { type: string }
+                  pesan: { type: string }
+
+    Pengguna:
+      type: object
+      required: [id, nama, email, peran]
+      properties:
+        id: { type: integer }
+        nama: { type: string }
+        email: { type: string }
+        peran: { type: string, enum: [user, admin] }
+    DaftarInput:
+      type: object
+      required: [nama, email, password]
+      properties:
+        nama: { type: string, minLength: 2, maxLength: 100 }
+        email: { type: string }
+        password: { type: string, minLength: 10, description: Maksimum 72 byte (batas bcrypt) }
+    MasukInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+    TokenResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [token, tipe, kedaluwarsa, pengguna]
+          properties:
+            token: { type: string }
+            tipe: { type: string, const: Bearer }
+            kedaluwarsa: { type: string, examples: [15m] }
+            pengguna: { $ref: "#/components/schemas/Pengguna" }
+
+    Produk:
+      type: object
+      required: [id, nama, harga, stok, kategori, deskripsi, gambar]
+      properties:
+        id: { type: integer }
+        nama: { type: string }
+        harga: { type: integer, description: Rupiah utuh }
+        stok: { type: integer, minimum: 0 }
+        kategori: { type: string, enum: [kopi, teh, gula, alat] }
+        deskripsi: { type: [string, "null"] }
+        gambar: { type: [string, "null"], description: "Path relatif, mis. /uploads/<uuid>.png" }
+    ProdukInput:
+      type: object
+      additionalProperties: false
+      required: [nama, harga, stok, kategori]
+      properties:
+        nama: { type: string, minLength: 3, maxLength: 100 }
+        harga: { type: integer, minimum: 0 }
+        stok: { type: integer, minimum: 0 }
+        kategori: { type: string, enum: [kopi, teh, gula, alat] }
+        deskripsi: { type: [string, "null"], maxLength: 500 }
+    ProdukUbah:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        nama: { type: string, minLength: 3, maxLength: 100 }
+        harga: { type: integer, minimum: 0 }
+        stok: { type: integer, minimum: 0 }
+        kategori: { type: string, enum: [kopi, teh, gula, alat] }
+        deskripsi: { type: [string, "null"], maxLength: 500 }
+    Meta:
+      type: object
+      required: [halaman, batas, total, totalHalaman]
+      properties:
+        halaman: { type: integer }
+        batas: { type: integer }
+        total: { type: integer }
+        totalHalaman: { type: integer }
+    DaftarProduk:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Produk" }
+        meta: { $ref: "#/components/schemas/Meta" }
+
+    ItemPesananInput:
+      type: object
+      required: [produkId, jumlah]
+      properties:
+        produkId: { type: integer, minimum: 1 }
+        jumlah: { type: integer, minimum: 1, maximum: 1000 }
+    PesananInput:
+      type: object
+      required: [item]
+      properties:
+        item:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/ItemPesananInput" }
+    Pesanan:
+      type: object
+      required: [id, status, total, dibuatPada, dibayarPada, pembayaran, catatan, pengguna, item]
+      properties:
+        id: { type: integer }
+        status: { type: string, enum: [menunggu_pembayaran, dibayar, dikirim, selesai, kedaluwarsa, gagal] }
+        total: { type: integer }
+        dibuatPada: { type: string }
+        dibayarPada: { type: [string, "null"] }
+        pembayaran:
+          type: [object, "null"]
+          required: [chargeId]
+          properties:
+            chargeId: { type: string }
+            paymentUrl: { type: [string, "null"] }
+        catatan: { type: [string, "null"] }
+        pengguna:
+          type: object
+          required: [id, nama, email]
+          properties:
+            id: { type: integer }
+            nama: { type: string }
+            email: { type: string }
+        item:
+          type: array
+          items:
+            type: object
+            required: [produkId, namaProduk, jumlah, hargaSatuan]
+            properties:
+              produkId: { type: integer }
+              namaProduk: { type: string }
+              jumlah: { type: integer }
+              hargaSatuan: { type: integer }
+    Tagihan:
+      type: object
+      required: [chargeId, paymentUrl, status]
+      properties:
+        chargeId: { type: string }
+        paymentUrl: { type: string }
+        status: { type: string }
+
+    EventWebhook:
+      type: object
+      required: [id, type, data]
+      properties:
+        id: { type: string }
+        type: { type: string, enum: [charge.paid, charge.expired, charge.failed] }
+        created: { type: integer }
+        data:
+          type: object
+          required: [charge_id, order_ref, amount]
+          properties:
+            charge_id: { type: string }
+            order_ref: { type: string }
+            amount: { type: integer }
+            status: { type: string }
+
+    Job:
+      type: object
+      required: [id, jenis, payload, status, percobaan, maksPercobaan]
+      properties:
+        id: { type: integer }
+        jenis: { type: string }
+        payload: { type: object }
+        status: { type: string, enum: [menunggu, berjalan, selesai, gagal] }
+        kunciUnik: { type: [string, "null"] }
+        percobaan: { type: integer }
+        maksPercobaan: { type: integer }
+        galat: { type: [string, "null"] }

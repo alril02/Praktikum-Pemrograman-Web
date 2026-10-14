@@ -1,0 +1,33 @@
+# systemd unit untuk API pada VPS.  /etc/systemd/system/toko-api.service
+#   sudo systemctl daemon-reload && sudo systemctl enable --now toko-api
+#   journalctl -u toko-api -f        (log)
+# Salin unit ini sebagai toko-worker.service dan ganti ExecStart bagian worker.
+
+[Unit]
+Description=Toko UMKM API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=toko
+Group=toko
+WorkingDirectory=/opt/toko/backend
+EnvironmentFile=/etc/toko/api.env          # berkas rahasia: chmod 600, pemilik root
+ExecStart=/usr/bin/node src/server.js
+Restart=on-failure
+RestartSec=3
+
+# Penutupan rapi: aplikasi menangani SIGTERM, beri waktu sebelum SIGKILL
+KillSignal=SIGTERM
+TimeoutStopSec=20
+
+# Pengerasan dasar
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/toko/backend/uploads
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,94 @@
+# Integrasi berkelanjutan: jalan pada setiap Pull Request dan push ke main.
+# Asumsi tata letak repositori:  backend/  dan  frontend/  di akar.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Hak minimum untuk GITHUB_TOKEN
+permissions:
+  contents: read
+
+# Batalkan eksekusi lama pada PR yang sama saat ada commit baru
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (lint, test, audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      # Nilai KHUSUS CI (bukan rahasia): hanya agar konfigurasi lolos validasi
+      NODE_ENV: test
+      DATABASE_URL: file:./ci.db
+      JWT_SECRET: ci-only-secret-0123456789-abcdefghijklmnopqrstuvwxyz
+      CORS_ORIGINS: http://localhost:5173
+      GATEWAY_BASE_URL: http://localhost:4100
+      GATEWAY_API_KEY: ci_gateway_key_0123456789
+      GATEWAY_WEBHOOK_SECRET: ci_webhook_secret_0123456789
+      EMAIL_DELAY_MS: "5"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instal dependensi (sesuai lockfile)
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Lint (pemeriksaan sintaks)
+        run: npm run lint
+
+      - name: Terapkan migrasi dan seed pada database uji
+        run: |
+          npx prisma migrate deploy
+          npm run db:seed
+
+      - name: Uji
+        run: npm test
+
+      - name: Audit dependensi produksi
+        run: npm run audit
+
+  frontend:
+    name: Frontend (test, build)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          VITE_API_BASE: https://api.contoh.id/api/v1
+
+      - name: Simpan artefak build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 7

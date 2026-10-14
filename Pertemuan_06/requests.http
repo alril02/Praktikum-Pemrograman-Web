@@ -1,0 +1,56 @@
+### Koleksi pengujian untuk ekstensi "REST Client" (VS Code). Klik "Send Request" di atas tiap blok.
+@base = http://localhost:3000/api/v1
+
+### Kesehatan
+GET {{base}}/kesehatan
+
+### Daftar produk
+GET {{base}}/produk
+
+### Filter kategori + cari + urut menurun + paginasi
+GET {{base}}/produk?kategori=kopi&q=gayo&urut=-harga&halaman=1&batas=5
+
+### Detail
+GET {{base}}/produk/1
+
+### Detail tidak ada (404)
+GET {{base}}/produk/9999
+
+### ID tidak valid (400)
+GET {{base}}/produk/abc
+
+### Buat (201 + Location)
+POST {{base}}/produk
+Content-Type: application/json
+
+{ "nama": "Kopi Bali Kintamani", "harga": 70000, "stok": 10, "kategori": "kopi" }
+
+### Buat tidak valid (422)
+POST {{base}}/produk
+Content-Type: application/json
+
+{ "nama": "K", "harga": -5, "stok": 1, "kategori": "mobil" }
+
+### JSON rusak (400)
+POST {{base}}/produk
+Content-Type: application/json
+
+{ "nama": "Kopi",
+
+### Ganti penuh (PUT)
+PUT {{base}}/produk/1
+Content-Type: application/json
+
+{ "nama": "Kopi Gayo Premium 250g", "harga": 69000, "stok": 15, "kategori": "kopi" }
+
+### Ubah sebagian (PATCH)
+PATCH {{base}}/produk/1
+Content-Type: application/json
+
+{ "stok": 3 }
+
+### Hapus (204)
+DELETE {{base}}/produk/10
+
+### Rute tidak dikenal (404)
+GET {{base}}/tidak-ada

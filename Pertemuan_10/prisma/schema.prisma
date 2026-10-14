@@ -1,0 +1,69 @@
+// Skema pertemuan 10: Pengguna mendapat passwordHash dan peran.
+// Setelah menyalin berkas ini jalankan:  npx prisma migrate dev --name tambah-autentikasi
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Kategori {
+  id     Int      @id @default(autoincrement())
+  nama   String   @unique
+  slug   String   @unique
+  produk Produk[]
+}
+
+model Produk {
+  id         Int           @id @default(autoincrement())
+  nama       String
+  harga      Int
+  stok       Int           @default(0)
+  kategoriId Int
+  kategori   Kategori      @relation(fields: [kategoriId], references: [id])
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+  diubahPada DateTime      @updatedAt
+
+  @@index([kategoriId])
+  @@index([nama])
+}
+
+model Pengguna {
+  id           Int       @id @default(autoincrement())
+  nama         String
+  email        String    @unique
+  // Opsional agar migrasi aman terhadap baris lama; akun tanpa hash tidak dapat login.
+  passwordHash String?
+  // "user" | "admin". Ditetapkan SERVER, tidak pernah diterima dari klien.
+  peran        String    @default("user")
+  pesanan      Pesanan[]
+}
+
+model Pesanan {
+  id         Int           @id @default(autoincrement())
+  penggunaId Int
+  pengguna   Pengguna      @relation(fields: [penggunaId], references: [id])
+  status     String        @default("menunggu_pembayaran")
+  total      Int
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+
+  @@index([penggunaId])
+}
+
+model ItemPesanan {
+  id          Int     @id @default(autoincrement())
+  pesananId   Int
+  produkId    Int
+  jumlah      Int
+  hargaSatuan Int
+  pesanan     Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  produk      Produk  @relation(fields: [produkId], references: [id])
+
+  @@unique([pesananId, produkId])
+  @@index([produkId])
+}

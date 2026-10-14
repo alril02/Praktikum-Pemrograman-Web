@@ -1,0 +1,124 @@
+// Skema pertemuan 13: antrean job (outbox), notifikasi, invoice.
+// Jalankan:  npx prisma migrate dev --name tambah-antrean
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Kategori {
+  id     Int      @id @default(autoincrement())
+  nama   String   @unique
+  slug   String   @unique
+  produk Produk[]
+}
+
+model Produk {
+  id         Int           @id @default(autoincrement())
+  nama       String
+  harga      Int
+  stok       Int           @default(0)
+  deskripsi  String?
+  gambar     String?
+  kategoriId Int
+  kategori   Kategori      @relation(fields: [kategoriId], references: [id])
+  item       ItemPesanan[]
+  dibuatPada DateTime      @default(now())
+  diubahPada DateTime      @updatedAt
+
+  @@index([kategoriId])
+  @@index([nama])
+}
+
+model Pengguna {
+  id           Int       @id @default(autoincrement())
+  nama         String
+  email        String    @unique
+  passwordHash String?
+  peran        String    @default("user")
+  pesanan      Pesanan[]
+}
+
+model Pesanan {
+  id           Int           @id @default(autoincrement())
+  penggunaId   Int
+  pengguna     Pengguna      @relation(fields: [penggunaId], references: [id])
+  status       String        @default("menunggu_pembayaran")
+  total        Int
+  item         ItemPesanan[]
+  dibuatPada   DateTime      @default(now())
+  pembayaranId String?       @unique
+  paymentUrl   String?
+  dibayarPada  DateTime?
+  catatan      String?
+  notifikasi   Notifikasi[]
+  invoice      Invoice?
+
+  @@index([penggunaId])
+  @@index([status, dibuatPada])
+}
+
+model ItemPesanan {
+  id          Int     @id @default(autoincrement())
+  pesananId   Int
+  produkId    Int
+  jumlah      Int
+  hargaSatuan Int
+  pesanan     Pesanan @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  produk      Produk  @relation(fields: [produkId], references: [id])
+
+  @@unique([pesananId, produkId])
+  @@index([produkId])
+}
+
+model EventWebhook {
+  id           String   @id
+  jenis        String
+  diterimaPada DateTime @default(now())
+}
+
+// ---- Antrean job (broker berbasis tabel; pola outbox) ----
+model Job {
+  id           Int       @id @default(autoincrement())
+  jenis        String
+  payload      String // JSON
+  // menunggu | berjalan | selesai | gagal (DLQ)
+  status       String    @default("menunggu")
+  kunciUnik    String?   @unique // enqueue idempoten
+  percobaan    Int       @default(0)
+  maksPercobaan Int      @default(5)
+  runAt        DateTime  @default(now())
+  dikunciPada  DateTime?
+  galat        String?
+  hasil        String?
+  dibuatPada   DateTime  @default(now())
+  selesaiPada  DateTime?
+
+  @@index([status, runAt])
+}
+
+// Hasil job: unik per (pesanan, jenis) agar eksekusi ulang tidak menggandakan catatan
+model Notifikasi {
+  id         Int      @id @default(autoincrement())
+  pesananId  Int
+  pesanan    Pesanan  @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  jenis      String
+  penerima   String
+  subjek     String
+  dikirimPada DateTime @default(now())
+
+  @@unique([pesananId, jenis])
+}
+
+model Invoice {
+  id        Int      @id @default(autoincrement())
+  pesananId Int      @unique
+  pesanan   Pesanan  @relation(fields: [pesananId], references: [id], onDelete: Cascade)
+  nomor     String   @unique
+  total     Int
+  dibuatPada DateTime @default(now())
+}

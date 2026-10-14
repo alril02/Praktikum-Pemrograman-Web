@@ -1,0 +1,23 @@
+# Dependensi
+node_modules/
+
+# Rahasia dan konfigurasi lokal
+.env
+.env.*
+!.env.example
+
+# Artefak build
+dist/
+build/
+coverage/
+
+# Log
+*.log
+npm-debug.log*
+
+# Berkas sistem dan editor
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Demo XSS: innerHTML vs textContent</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    fieldset { margin-block: 1.5rem; border: 1px solid #cbd2d9; border-radius: .5rem; }
+    legend { font-weight: 700; }
+    .rentan legend { color: #b00020; }
+    .aman legend { color: #0b6e4f; }
+    textarea { width: 100%; min-height: 5rem; font: inherit; padding: .5rem; }
+    .keluaran { min-height: 2.5rem; padding: .5rem; background: #f5f7fa; border-radius: .25rem; margin-top: .5rem; }
+    code { background: #eef2f6; padding: .1rem .3rem; border-radius: .25rem; }
+  </style>
+</head>
+<body>
+  <h1>Demo XSS: innerHTML vs textContent</h1>
+  <p>Tujuan: melihat langsung mengapa data pengguna tidak boleh disisipkan sebagai HTML.</p>
+
+  <p><strong>Muatan uji (salin ke kolom komentar):</strong></p>
+  <p><code>&lt;img src=x onerror="alert('XSS dieksekusi')"&gt;</code></p>
+
+  <label for="komentar"><strong>Komentar pengguna</strong></label>
+  <textarea id="komentar"></textarea>
+
+  <fieldset class="rentan">
+    <legend>Versi RENTAN (innerHTML)</legend>
+    <button type="button" id="btn-rentan">Tampilkan komentar</button>
+    <div class="keluaran" id="out-rentan" aria-live="polite"></div>
+  </fieldset>
+
+  <fieldset class="aman">
+    <legend>Versi AMAN (textContent)</legend>
+    <button type="button" id="btn-aman">Tampilkan komentar</button>
+    <div class="keluaran" id="out-aman" aria-live="polite"></div>
+  </fieldset>
+
+  <script>
+    const input = document.getElementById("komentar");
+
+    // RENTAN: string diurai sebagai HTML sehingga onerror dijalankan.
+    document.getElementById("btn-rentan").addEventListener("click", () => {
+      document.getElementById("out-rentan").innerHTML = input.value;
+    });
+
+    // AMAN: string diperlakukan sebagai teks murni.
+    document.getElementById("btn-aman").addEventListener("click", () => {
+      document.getElementById("out-aman").textContent = input.value;
+    });
+  </script>
+</body>
+</html>

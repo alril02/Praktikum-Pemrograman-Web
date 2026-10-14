@@ -1,0 +1,48 @@
+# Lingkungan lokal lengkap: PostgreSQL + API + worker.
+#   cp .env.example .env   (isi JWT_SECRET), lalu:
+#   docker compose up --build
+#
+# Catatan: Prisma pada proyek ini memakai provider "sqlite". Untuk memakai PostgreSQL ubah `provider`
+# pada prisma/schema.prisma menjadi "postgresql" dan buat ulang migrasi (lihat deploy/runbook.md).
+# Compose ini menyiapkan kerangka layanan yang akan dipakai pada tahap itu.
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: toko
+      POSTGRES_PASSWORD: toko_dev_password
+      POSTGRES_DB: toko
+    ports: ["5432:5432"]
+    volumes: [dbdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U toko -d toko"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: .
+    env_file: .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://toko:toko_dev_password@db:5432/toko?schema=public
+      PORT: "3000"
+    ports: ["3000:3000"]
+    depends_on:
+      db: { condition: service_healthy }
+    volumes: [uploads:/app/uploads]
+
+  worker:
+    build: .
+    command: ["node", "src/queue/worker-main.js"]
+    env_file: .env
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://toko:toko_dev_password@db:5432/toko?schema=public
+    depends_on:
+      db: { condition: service_healthy }
+
+volumes:
+  dbdata:
+  uploads:

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Katalog Toko UMKM</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#katalog">Lewati ke katalog</a>
+
+  <header class="bar">
+    <h1>Katalog Toko UMKM</h1>
+    <p class="keranjang" aria-live="polite">
+      Keranjang: <span id="jumlah-item">0</span> item &middot; <span id="total-harga">Rp 0</span>
+    </p>
+  </header>
+
+  <main id="katalog">
+    <form class="filter" role="search" aria-label="Filter katalog">
+      <div>
+        <label for="cari">Cari produk</label>
+        <input id="cari" type="search" autocomplete="off" placeholder="mis. gayo">
+      </div>
+      <div>
+        <label for="kategori">Kategori</label>
+        <select id="kategori">
+          <option value="semua">Semua</option>
+        </select>
+      </div>
+    </form>
+
+    <p id="info" role="status" aria-live="polite"></p>
+    <section id="daftar-produk" class="grid" aria-label="Daftar produk"></section>
+  </main>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "praktikum-pertemuan-04",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "api": "node mock-api.js",
+    "latihan": "node latihan-promise.js",
+    "web": "npx serve ."
+  }
+}

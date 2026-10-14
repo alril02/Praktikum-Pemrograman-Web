@@ -1,0 +1,142 @@
+/* Praktikum Pertemuan 2 - Gaya Mobile-First
+   Kerjakan TODO. Gunakan satuan rem, Flexbox untuk bar navigasi,
+   Grid auto-fit untuk produk. Pastikan kontras >= 4.5:1. */
+
+/* ---------- 1. Token & Reset ---------- */
+:root {
+  /* TODO 1: pilih warna yang lolos kontras AA (cek di webaim.org/resources/contrastchecker) */
+  --warna-latar: #ffffff;
+  --warna-teks: #1f2933;
+  --warna-aksen: #0b6e4f;      /* contoh; verifikasi kontras dengan teks putih */
+  --warna-aksen-teks: #ffffff;
+  --warna-batas: #cbd2d9;
+
+  --radius: 0.5rem;
+  --ruang: 1rem;
+  --lebar-maks: 70rem;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.6;
+  color: var(--warna-teks);
+  background: var(--warna-latar);
+}
+
+img { max-width: 100%; height: auto; display: block; }
+
+.container {
+  width: min(100% - 2rem, var(--lebar-maks));
+  margin-inline: auto;
+}
+
+/* ---------- 2. Aksesibilitas ---------- */
+/* TODO 2: skip link tersembunyi sampai menerima fokus */
+.skip-link {
+  position: absolute;
+  left: 0;
+  top: -6rem;
+  padding: 0.75rem 1rem;
+  background: #000;
+  color: #fff;
+}
+.skip-link:focus { top: 0; }
+
+/* TODO 3: indikator fokus yang jelas, JANGAN outline: none tanpa pengganti */
+:focus-visible {
+  outline: 3px solid #1a73e8;
+  outline-offset: 2px;
+}
+
+/* ---------- 3. Header & Navigasi (Flexbox) ---------- */
+.site-header { border-bottom: 1px solid var(--warna-batas); }
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ruang);
+  padding-block: var(--ruang);
+}
+
+.brand { font-weight: 700; font-size: 1.25rem; color: inherit; text-decoration: none; }
+
+/* TODO 4: setelah mengubah .menu menjadi <nav><ul>, sesuaikan selektor ini */
+.menu { display: flex; gap: var(--ruang); flex-wrap: wrap; }
+.menu a { color: inherit; padding: 0.5rem 0.25rem; }
+
+/* ---------- 4. Hero (satu kolom -> dua kolom) ---------- */
+.hero {
+  display: grid;
+  gap: 1.5rem;
+  padding-block: 2rem;
+  text-align: center;
+}
+.judul-besar { font-size: clamp(1.75rem, 5vw, 3rem); font-weight: 800; line-height: 1.15; }
+
+.btn {
+  display: inline-block;
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--warna-aksen);
+  color: var(--warna-aksen-teks);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ---------- 5. Seksi & Produk (Grid) ---------- */
+section { padding-block: 2rem; }
+.judul-seksi { font-size: 1.5rem; font-weight: 700; margin-bottom: 1rem; }
+
+.produk-grid {
+  display: grid;
+  gap: 1.5rem;
+  /* TODO 5: kolom responsif tanpa media query (auto-fit + minmax) */
+  grid-template-columns: 1fr;
+}
+
+.kartu {
+  border: 1px solid var(--warna-batas);
+  border-radius: var(--radius);
+  padding: var(--ruang);
+}
+.kartu-judul { font-weight: 700; margin-top: 0.5rem; }
+.harga { margin: 0.25rem 0 0; font-weight: 600; }
+
+/* ---------- 6. Formulir ---------- */
+form { display: grid; gap: var(--ruang); max-width: 32rem; }
+label { font-weight: 600; display: block; margin-bottom: 0.25rem; }
+input, textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #52606d;   /* kontras komponen UI >= 3:1 */
+  border-radius: var(--radius);
+  font: inherit;
+}
+textarea { min-height: 8rem; resize: vertical; }
+.hint { margin: 0.25rem 0 0; font-size: 0.9rem; color: #52606d; }
+
+/* ---------- 7. Footer ---------- */
+.site-footer { margin-top: 2rem; padding-block: 1.5rem; border-top: 1px solid var(--warna-batas); }
+
+/* ---------- 8. Tablet ke atas ---------- */
+/* TODO 6: hero dua kolom, rata kiri, mulai 48rem */
+@media (min-width: 48rem) {
+  .hero {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    text-align: left;
+  }
+}
+
+/* TODO 7: hormati preferensi pengguna */
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
