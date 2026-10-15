@@ -20,6 +20,14 @@ const state = {
   keranjang: new Map(), // id produk -> jumlah
 };
 
+const tombol = document.querySelector("button");
+const cari = document.getElementById("cari");
+
+tombol.addEventListener("focus", (event) => {
+  console.log("Cursor berada di atas tombol");
+});
+
+
 // ---------- Utilitas ----------
 const formatRupiah = (angka) =>
   new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(angka);

@@ -13,27 +13,36 @@ const produk = [
 
 // 1. Kembalikan array berisi nama produk saja (map).
 function daftarNama(data) {
-  // TODO
+  return data.map(p => p.nama);
 }
 
 // 2. Kembalikan produk yang stoknya > 0 (filter).
 function produkTersedia(data) {
   // TODO
+  return data.filter(p => p.stok > 0)
 }
 
 // 3. Kembalikan total nilai persediaan: jumlah (harga * stok) semua produk (reduce).
 function nilaiPersediaan(data) {
   // TODO
+  return data.reduce((total, p) => total + p.harga * p.stok, 0);
 }
 
 // 4. Kembalikan produk termurah (objek). Jangan mengubah array asli! (salin sebelum sort)
 function produkTermurah(data) {
   // TODO
+  const dataCopy = [...data];
+  return dataCopy.sort((a, b) => a.harga - b.harga)[0];
 }
 
 // 5. Kelompokkan produk berdasarkan kategori -> { kopi: [...], teh: [...], ... } (reduce)
 function kelompokKategori(data) {
   // TODO
+  return data.reduce((acc, p) => {
+    if (!acc[p.kategori]) acc[p.kategori] = [];
+    acc[p.kategori].push(p);
+    return acc;
+  }, {});
 }
 
 // 6. Cari berdasarkan kata kunci, tidak peka huruf besar-kecil, hanya pada nama.
