@@ -49,6 +49,9 @@ function kelompokKategori(data) {
 //    Kembalikan array hasil. Kata kunci kosong -> kembalikan semua.
 function cariProduk(data, kata) {
   // TODO
+  const kataLower = kata.trim().toLowerCase();
+  if (!kataLower) return data;
+  return data.filter(p => p.nama.toLowerCase().includes(kataLower));
 }
 
 // ====================== PENGECEKAN (jangan diubah) ======================
